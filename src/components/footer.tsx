@@ -1,60 +1,33 @@
 import Link from "next/link";
-import { Mail, MapPin, Phone } from "lucide-react";
-import { BrandApple, BrandFacebook, BrandGooglePlay, BrandInstagram, BrandX, BrandYoutube } from "./icons";
+import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { BrandFacebook, BrandInstagram, BrandX, BrandYoutube } from "./icons";
 import { cars, site } from "@/lib/data";
+import { ADMIN_WA, waLink } from "@/lib/constants";
 import { Logo } from "./navbar";
-import { cn } from "@/lib/utils";
 
-export function StoreBadges({ className }: { className?: string }) {
-  return (
-    <div className={cn("flex flex-wrap gap-3", className)}>
-      <a
-        href="#"
-        className="flex items-center gap-2.5 rounded-xl bg-ink px-4 py-2.5 text-white transition-opacity hover:opacity-85"
-      >
-        <BrandApple className="size-6" />
-        <span className="leading-tight">
-          <span className="block text-[10px] text-white/70">Download on the</span>
-          <span className="block text-sm font-semibold">App Store</span>
-        </span>
-      </a>
-      <a
-        href="#"
-        className="flex items-center gap-2.5 rounded-xl bg-ink px-4 py-2.5 text-white transition-opacity hover:opacity-85"
-      >
-        <BrandGooglePlay className="size-5" />
-        <span className="leading-tight">
-          <span className="block text-[10px] text-white/70">Get it on</span>
-          <span className="block text-sm font-semibold">Google Play</span>
-        </span>
-      </a>
-    </div>
-  );
-}
-
-const socials = [
-  { icon: BrandFacebook, label: "Facebook" },
-  { icon: BrandInstagram, label: "Instagram" },
-  { icon: BrandX, label: "X (Twitter)" },
-  { icon: BrandYoutube, label: "YouTube" },
+const sosial = [
+  { ikon: BrandInstagram, label: "Instagram" },
+  { ikon: BrandFacebook, label: "Facebook" },
+  { ikon: BrandX, label: "X (Twitter)" },
+  { ikon: BrandYoutube, label: "YouTube" },
 ];
 
 export function Footer() {
   return (
     <footer className="border-t border-line bg-white">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
-        {/* Brand + contact */}
         <div className="space-y-5">
           <Logo />
+          <p className="text-sm leading-relaxed text-body">{site.deskripsi}</p>
           <ul className="space-y-3 text-sm text-body">
             <li className="flex items-start gap-3">
               <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
-              <span>{site.address}</span>
+              <span>{site.alamat}</span>
             </li>
             <li className="flex items-center gap-3">
               <Phone className="size-4 shrink-0 text-primary" />
-              <a href={`tel:${site.phone.replace(/[^+\d]/g, "")}`} className="hover:text-primary">
-                {site.phone}
+              <a href={`tel:${ADMIN_WA.tel}`} className="hover:text-primary">
+                {site.telepon}
               </a>
             </li>
             <li className="flex items-center gap-3">
@@ -63,12 +36,15 @@ export function Footer() {
                 {site.email}
               </a>
             </li>
+            <li className="flex items-center gap-3">
+              <Clock className="size-4 shrink-0 text-primary" />
+              {site.jamOperasional}
+            </li>
           </ul>
         </div>
 
-        {/* Quick links */}
         <div>
-          <h4 className="mb-4 text-base font-bold text-ink">Quick Links</h4>
+          <h4 className="mb-4 text-base font-bold text-ink">Halaman</h4>
           <ul className="space-y-3 text-sm text-body">
             {site.nav.map((item) => (
               <li key={item.label}>
@@ -80,45 +56,51 @@ export function Footer() {
           </ul>
         </div>
 
-        {/* Vehicles */}
         <div>
-          <h4 className="mb-4 text-base font-bold text-ink">Our Vehicles</h4>
+          <h4 className="mb-4 text-base font-bold text-ink">Mobil populer</h4>
           <ul className="space-y-3 text-sm text-body">
             {cars.slice(0, 5).map((c) => (
               <li key={c.slug}>
                 <Link href={`/vehicles/${c.slug}`} className="transition-colors hover:text-primary">
-                  {c.name}
+                  {c.nama}
                 </Link>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* App */}
         <div>
-          <h4 className="mb-4 text-base font-bold text-ink">Download The App</h4>
-          <p className="mb-4 text-sm text-body">
-            Book, extend, and unlock your rental straight from your phone.
+          <h4 className="mb-4 text-base font-bold text-ink">Pesan lewat WhatsApp</h4>
+          <p className="mb-4 text-sm leading-relaxed text-body">
+            Semua pemesanan diproses admin lewat chat. Tidak ada pembayaran atau formulir pemesanan di website
+            ini.
           </p>
-          <StoreBadges />
+          <a
+            href={waLink("Halo Admin RentCar, saya mau tanya-tanya soal sewa mobil.")}
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-fit items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark"
+          >
+            <MessageCircle className="size-4" />
+            Chat {site.telepon}
+          </a>
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6 lg:px-8">
           <p className="text-sm text-body">
-            © {new Date().getFullYear()} {site.name}. All rights reserved.
+            © {new Date().getFullYear()} {site.nama}. Seluruh hak cipta dilindungi.
           </p>
           <div className="flex items-center gap-3">
-            {socials.map(({ icon: Icon, label }) => (
+            {sosial.map(({ ikon: Ikon, label }) => (
               <a
                 key={label}
                 href="#"
                 aria-label={label}
                 className="grid size-9 place-items-center rounded-full border border-line text-body transition-colors hover:border-primary hover:text-primary"
               >
-                <Icon className="size-4" />
+                <Ikon className="size-4" />
               </a>
             ))}
           </div>

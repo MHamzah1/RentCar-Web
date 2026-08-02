@@ -1,105 +1,104 @@
 import type { Metadata } from "next";
-import { CarImage } from "@/components/car-image";
-import { AppDownload, SectionLabel, StatsBand } from "@/components/sections";
-import { Reviews } from "@/components/reviews";
-import { CtaBanner } from "@/components/sections";
+import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
-import { aboutHeroImage, aboutStoryImage, appScreens, site } from "@/lib/data";
+import { CarImage } from "@/components/car-image";
+import { BandStatistik, CtaBanner, SectionLabel, SyaratSewa } from "@/components/sections";
+import { Reviews } from "@/components/reviews";
+import { fotoCerita, fotoTentang, site } from "@/lib/data";
 
 export const metadata: Metadata = {
-  title: "About Us",
+  title: "Tentang Kami",
   description:
-    "RentCar has kept drivers moving for 25+ years with a 540-car fleet, honest pricing and human support.",
+    "RentCar melayani sewa mobil di Bandung sejak 2018 — armada terawat, harga apa adanya, dan admin yang gampang dihubungi.",
 };
 
-const pillars = [
+const PILAR = [
   {
-    title: "Variety of brands",
-    text: "Tesla, BMW, Porsche, Jeep and more — one account, every kind of drive.",
+    judul: "Armada milik sendiri",
+    isi: "Unit dirawat tim kami, bukan dicarikan dadakan dari pihak ketiga saat ada yang pesan.",
   },
   {
-    title: "Awesome support",
-    text: "Talk to a real person in minutes, seven days a week, in-app or by phone.",
+    judul: "Harga tanpa kejutan",
+    isi: "Angka yang disebut admin di awal adalah angka yang dibayar. Tidak ada biaya administrasi tersembunyi.",
   },
   {
-    title: "Maximum freedom",
-    text: "Unlimited mileage and flexible pickup points, including airport delivery.",
+    judul: "Bisa antar-jemput",
+    isi: "Unit diantar ke rumah, kantor, stasiun, atau bandara di area Bandung dan sekitarnya.",
   },
   {
-    title: "Flexibility on the go",
-    text: "Extend, shorten, or swap your rental from the app — no counter visits.",
+    judul: "Fleksibel di tengah jalan",
+    isi: "Butuh tambah hari? Chat admin, sewa diperpanjang tanpa harus balik ke garasi dulu.",
   },
 ];
 
-const promises = [
-  "Full insurance included on every booking",
-  "Free cancellation up to 24 hours before pickup",
-  "24/7 roadside assistance across the country",
-  "No hidden fees — the checkout price is the final price",
+const JANJI = [
+  "Asuransi sudah termasuk di harga sewa",
+  "Kondisi mobil direkam saat serah terima — aman untuk kedua pihak",
+  "Bantuan lewat WhatsApp selama masa sewa",
+  "Perpanjangan bisa diurus lewat chat",
 ];
 
 export default function AboutPage() {
   return (
     <>
-      {/* Heading + breadcrumb */}
       <section className="mx-auto max-w-7xl px-4 pt-14 text-center sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-extrabold text-ink sm:text-5xl">About Us</h1>
+        <h1 className="text-4xl font-extrabold text-ink sm:text-5xl">Tentang RentCar</h1>
         <p className="mt-3 text-sm text-body">
-          <span className="text-primary">Home</span> / About Us
+          <Link href="/" className="text-primary hover:underline">
+            Beranda
+          </Link>{" "}
+          / Tentang Kami
         </p>
       </section>
 
-      {/* Intro pillars */}
       <section className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1.4fr] lg:px-8">
         <h2 className="text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
-          Where every drive feels extraordinary
+          Rental mobil yang mengurus detailnya untuk Anda
         </h2>
         <div className="grid gap-8 sm:grid-cols-2">
-          {pillars.map((p) => (
-            <div key={p.title}>
-              <h3 className="text-lg font-bold text-ink">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-body">{p.text}</p>
+          {PILAR.map((p) => (
+            <div key={p.judul}>
+              <h3 className="text-lg font-bold text-ink">{p.judul}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-body">{p.isi}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Wide image */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="relative h-72 overflow-hidden rounded-[2rem] sm:h-[420px]">
-          <CarImage src={aboutHeroImage} alt="RentCar on the road" sizes="100vw" priority />
+          <CarImage src={fotoTentang} alt="Armada RentCar di jalan" sizes="100vw" priority />
         </div>
       </section>
 
-      {/* Story */}
       <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:px-8">
         <div>
-          <SectionLabel>Our story</SectionLabel>
+          <SectionLabel>Cerita kami</SectionLabel>
           <h2 className="text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
-            Unlock unforgettable memories on the road
+            Mulai dari tiga mobil dan satu nomor WhatsApp
           </h2>
           <p className="mt-4 text-[15px] leading-relaxed text-body">
-            {site.name} started with three cars and one idea: renting a vehicle should feel as
-            good as driving it. Twenty-five years later we keep thousands of drivers moving every
-            month — and we still treat every handover like the first one.
+            {site.nama} berdiri di Bandung pada 2018 dengan tiga unit dan satu prinsip sederhana: penyewa harus
+            tahu persis apa yang dia bayar. Sekarang armada kami sudah puluhan unit, tapi caranya masih sama —
+            satu nomor admin, dijawab orang, bukan mesin.
           </p>
           <ul className="mt-6 space-y-3">
-            {promises.map((p) => (
-              <li key={p} className="flex items-start gap-3 text-sm text-ink">
+            {JANJI.map((j) => (
+              <li key={j} className="flex items-start gap-3 text-sm text-ink">
                 <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
-                {p}
+                {j}
               </li>
             ))}
           </ul>
         </div>
         <div className="relative h-80 overflow-hidden rounded-[2rem] lg:h-[440px]">
-          <CarImage src={aboutStoryImage} alt="Night drive with RentCar" sizes="(max-width:1024px) 100vw, 50vw" />
+          <CarImage src={fotoCerita} alt="Perjalanan malam bersama RentCar" sizes="(max-width:1024px) 100vw, 50vw" />
         </div>
       </section>
 
-      <StatsBand />
+      <BandStatistik />
+      <SyaratSewa ringkas />
       <Reviews />
-      <AppDownload screens={appScreens} />
       <CtaBanner />
     </>
   );

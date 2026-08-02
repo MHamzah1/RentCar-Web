@@ -32,10 +32,15 @@ Hal-hal berikut **di luar lingkup** versi ini, supaya jelas sejak awal:
 
 - Booking mandiri oleh customer lewat website
 - Login / akun untuk customer
-- Pembayaran online (payment gateway)
+- Pembayaran online (payment gateway) — pembayaran **dicatat** admin, tapi
+  uangnya tidak lewat website
 - Aplikasi mobile
-- Notifikasi otomatis ke customer (WhatsApp blast, email, SMS)
+- **Notifikasi otomatis ke customer** (WhatsApp blast, email, SMS)
 - Multi-cabang / multi-perusahaan
+
+> Catatan soal notifikasi: reminder overtime **ada**, tetapi bentuknya
+> notifikasi di dalam aplikasi admin (lonceng + daftar di dashboard). Yang di
+> luar lingkup adalah pesan otomatis yang dikirim ke customer.
 
 Kalau nanti dibutuhkan, dicatat sebagai fase berikutnya — bukan diselipkan ke
 lingkup sekarang.

@@ -1,34 +1,45 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CtaBanner } from "@/components/sections";
 import { VehiclesExplorer } from "@/components/vehicles-explorer";
+import { hargaSopirPerHari, hargaTermurah } from "@/lib/data";
+import { rupiah } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Vehicles",
+  title: "Armada Mobil",
   description:
-    "Browse the RentCar fleet — sedans, cabriolets, pickups, SUVs and minivans with transparent daily pricing.",
+    "Daftar mobil yang bisa disewa di RentCar Bandung — MPV, SUV, hatchback, dan minibus — beserta harga sewa per hari dan ketersediaannya.",
 };
 
 export default async function VehiclesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ kategori?: string }>;
 }) {
-  const { type } = await searchParams;
+  const { kategori } = await searchParams;
 
   return (
     <>
-      <section className="mx-auto max-w-7xl px-4 pb-20 pt-14 sm:px-6 lg:px-8">
-        <h1 className="text-center text-4xl font-extrabold text-ink sm:text-5xl">
-          Select a vehicle group
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-center text-[15px] leading-relaxed text-body">
-          Every car is inspected, insured, and delivered with a full tank. Pick a category to
-          narrow things down.
+      <section className="mx-auto max-w-7xl px-4 pb-4 pt-14 sm:px-6 lg:px-8">
+        <p className="text-center text-sm text-body">
+          <Link href="/" className="text-primary hover:underline">
+            Beranda
+          </Link>{" "}
+          / Armada Mobil
         </p>
-        <div className="mt-12">
-          <VehiclesExplorer initialType={type} />
-        </div>
+        <h1 className="mt-4 text-center text-4xl font-extrabold text-ink sm:text-5xl">
+          Pilih mobil yang Anda butuhkan
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-[15px] leading-relaxed text-body">
+          Harga mulai {rupiah(hargaTermurah)} per hari sudah termasuk asuransi. Butuh sopir? Tambah{" "}
+          {rupiah(hargaSopirPerHari)} per hari, berlaku untuk semua jenis mobil.
+        </p>
       </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+        <VehiclesExplorer kategoriAwal={kategori} />
+      </section>
+
       <CtaBanner />
     </>
   );

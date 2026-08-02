@@ -17,12 +17,24 @@ login.
   halaman login
 - Password disimpan dalam bentuk hash, tidak pernah plaintext
 
+### Dua peran
+
+| Peran | Boleh melihat |
+|---|---|
+| **Super Admin (Owner)** | Semuanya, termasuk **harga modal, margin, dan laba** |
+| **Admin (Staf)** | Semuanya **kecuali** harga modal, margin, dan laba |
+
+Aturan penerapannya:
+
+- Kolom modal/laba tidak sekadar disembunyikan di tampilan — untuk peran Staf,
+  angka itu **tidak boleh ikut dikirim** ke halaman sama sekali.
+- Berlaku di semua tempat: katalog, detail mobil, daftar & detail transaksi,
+  dashboard, dan file hasil export.
+
 ### Catatan
 
-- Untuk tahap awal cukup **satu peran: Admin**. Kalau nanti ada Owner (bisa
-  lihat harga modal & laba) vs Staf (tidak), itu ditambahkan belakangan.
-- Belum ada pendaftaran mandiri — akun admin dibuat manual (seed / oleh admin
-  yang sudah ada).
+- Belum ada pendaftaran mandiri — akun admin dibuat manual (seed / oleh Super
+  Admin).
 
 ---
 
@@ -36,8 +48,8 @@ yang tampil di landing page.
 | Field | Keterangan |
 |---|---|
 | Nama mobil | Contoh: Toyota Avanza 2022 |
-| Kategori | Sedan / SUV / MPV / Minivan / Pickup / dll. |
-| Foto | Satu foto utama + galeri |
+| Kategori | MPV / SUV / Hatchback / Minibus |
+| Foto | Satu foto utama + galeri, **diunggah admin** (bukan foto stok) |
 | Spesifikasi | Transmisi, bahan bakar, jumlah kursi, jumlah pintu, AC |
 | Deskripsi | Teks bebas untuk landing page |
 | **Harga jual per hari** | Harga ke customer — **ini yang tampil di landing page** |
@@ -56,10 +68,14 @@ yang tampil di landing page.
 
 ### Ketersediaan unit
 
+Unit **tidak dibedakan per nomor plat** — yang dicatat hanya berapa banyak unit
+yang dimiliki per model.
+
 - Setiap mobil punya **jumlah unit total**.
-- **Unit tersedia** = unit total − jumlah transaksi berstatus *Booking* atau
-  *Sedang Perjalanan* untuk mobil tersebut.
-- Saat status transaksi menjadi **Selesai**, unit kembali tersedia.
+- **Unit tersedia** = unit total − jumlah transaksi yang sedang menahan unit,
+  yaitu berstatus *Booking*, *Sedang Perjalanan*, *Lewat Waktu*, atau
+  *Diperpanjang*.
+- Status **Selesai** dan **Batal** sama-sama mengembalikan unit ke stok.
 - Kalau unit tersedia = 0, mobil ditandai **Tidak tersedia** dan admin tidak
   bisa membuat booking baru untuk mobil itu.
 
@@ -161,7 +177,8 @@ klik **Booking** → pindah ke form transaksi dengan data mobil sudah terisi.
 ### 4.2 Isi form transaksi
 
 **Bagian mobil (terisi otomatis, tidak diketik ulang)**
-Nama mobil, unit yang dipakai, harga jual per hari, harga modal per hari.
+Nama mobil, harga jual per hari, harga modal per hari (Super Admin saja), sisa
+unit tersedia.
 
 **Bagian customer**
 Cari customer yang sudah ada, atau buat baru (lihat modul Customer).
@@ -176,40 +193,99 @@ ini.
 |---|---|
 | Tanggal mulai sewa | Tanggal pengambilan mobil |
 | Durasi (hari) | Lama sewa |
-| Jam berangkat | Jam pengambilan |
+| Jam berangkat | Jam pengambilan — sekaligus patokan jam pengembalian |
+| Layanan | **Lepas kunci** atau **Dengan sopir** (+Rp 500.000/hari, semua mobil) |
+| DP diterima | Uang muka yang dibayar customer saat booking |
+| Metode pembayaran | Tunai / Transfer |
 
 **Dihitung otomatis**
 
 - Tanggal selesai = tanggal mulai + durasi
-- Total harga jual = harga jual/hari × durasi
-- Total modal = harga modal/hari × durasi
-- Laba = total harga jual − total modal
+- Biaya sewa = harga jual/hari × durasi
+- Biaya sopir = Rp 500.000 × durasi (kalau dipilih)
+- Denda = jam overtime × Rp 50.000
+- **Total tagihan** = biaya sewa + biaya sopir + denda
+- **Sisa tagihan** = total tagihan − total dibayar
+- Total modal & laba — **hanya untuk Super Admin**
 
 ### 4.3 Status
 
 ```
-Booking  →  Sedang Perjalanan  →  Selesai
+                    ┌──────────────► BATAL (stok kembali)
+                    │
+BOOKING ────────────┴──► SEDANG PERJALANAN ──────────────► SELESAI
+   (video wajib di sini)          │                            ▲
+                                  ▼ (otomatis, lewat batas)    │
+                             LEWAT WAKTU ──(+n hari)──► DIPERPANJANG
+                                  │                            │
+                                  └────────────────────────────┘
 ```
 
-| Status | Kapan dipakai |
-|---|---|
-| **Booking** | Begitu transaksi disimpan. Mobil sudah dipesan, belum berangkat |
-| **Sedang Perjalanan** | Mobil sudah diambil customer |
-| **Selesai** | Mobil sudah dikembalikan, sewa berakhir |
+| Status | Kapan dipakai | Menahan unit? |
+|---|---|---|
+| **Booking** | Begitu transaksi disimpan, mobil belum berangkat | Ya |
+| **Sedang Perjalanan** | Mobil sudah diambil customer | Ya |
+| **Lewat Waktu** | Melewati batas pengembalian — **otomatis, tanpa diklik** | Ya |
+| **Diperpanjang** | Sewa ditambah beberapa hari oleh admin | Ya |
+| **Selesai** | Mobil kembali, tagihan diselesaikan | Tidak |
+| **Batal** | Booking dibatalkan sebelum mobil berangkat | Tidak |
 
 Aturan:
 
-- Status berpindah maju satu arah, diubah manual oleh admin.
-- Status **Booking** dan **Sedang Perjalanan** menahan satu unit mobil.
-- Status **Selesai** mengembalikan unit ke stok tersedia.
+- Perpindahan status dilakukan admin, **kecuali Lewat Waktu** yang dihitung
+  otomatis dari batas pengembalian.
+- **Batal hanya boleh dari status Booking.**
+- Status **Selesai** dan **Batal** sama-sama mengembalikan unit ke stok.
 
-### 4.4 Halaman daftar transaksi
+### 4.4 Video kondisi awal unit (wajib)
+
+Saat admin menekan **Mulai Perjalanan**, sistem mewajibkan unggah **video
+kondisi awal mobil** sebelum status berpindah.
+
+- Tombol Mulai Perjalanan **tidak bisa diteruskan** tanpa video.
+- Video jadi bukti kondisi unit saat diserahkan (baret, penyok, kelengkapan).
+- Disimpan di storage privat seperti dokumen customer — **bukan** di `public/`.
+- Video tampil di halaman detail transaksi untuk dicocokkan saat pengembalian.
+
+### 4.5 Lewat waktu, denda, dan perpanjangan
+
+Batas pengembalian = tanggal selesai pada **jam yang sama dengan jam berangkat**.
+
+Begitu terlampaui:
+
+1. Status otomatis menjadi **Lewat Waktu**.
+2. Muncul **notifikasi di dalam aplikasi admin** (lonceng di topbar + daftar di
+   dashboard). Tidak mengirim WhatsApp/email otomatis ke customer.
+3. **Denda Rp 50.000 per jam** berjalan dan masuk ke total tagihan.
+
+Dari status Lewat Waktu, admin punya dua aksi:
+
+| Aksi | Hasil |
+|---|---|
+| **Perpanjang** | Isi tambahan berapa hari → durasi bertambah, status jadi **Diperpanjang**, biaya sewa ikut bertambah |
+| **Selesaikan** | Catat pelunasan + denda → status **Selesai**, unit kembali ke stok |
+
+### 4.6 Pembayaran
+
+Tiap transaksi punya riwayat pembayaran, bukan satu angka tunggal:
+
+| Jenis | Kapan dicatat |
+|---|---|
+| **DP** | Saat booking dibuat |
+| **Pelunasan** | Saat mobil dikembalikan |
+| **Denda** | Kalau ada overtime |
+
+Status pembayaran dihitung dari total yang masuk: **Belum Bayar** → **DP** →
+**Lunas**.
+
+### 4.7 Halaman daftar transaksi
 
 - Tabel transaksi dengan filter status dan rentang tanggal
 - Kolom minimal: kode transaksi, mobil, customer, tanggal mulai, tanggal
-  selesai, durasi, total, status
-- Klik baris → halaman detail transaksi (lengkap dengan data customer, jaminan,
-  dan rincian harga)
+  selesai, durasi, total tagihan, status pembayaran, status transaksi
+- Baris berstatus **Lewat Waktu** ditandai mencolok
+- Klik baris → halaman detail transaksi (data customer, jaminan, video serah
+  terima, rincian tagihan, riwayat pembayaran)
 
 ---
 
@@ -220,11 +296,15 @@ melihatnya di peta.
 
 ### Kebutuhan
 
-- Halaman peta yang menampilkan posisi mobil-mobil yang sedang berstatus
-  **Sedang Perjalanan**
-- Marker per mobil, klik marker → info mobil, customer, dan transaksi terkait
+- Halaman peta yang menampilkan posisi mobil yang sedang di luar — status
+  **Sedang Perjalanan**, **Lewat Waktu**, atau **Diperpanjang**
+- Marker per transaksi, klik marker → info mobil, customer, dan transaksi terkait
+- Unit berstatus **Lewat Waktu** ditandai berbeda supaya langsung terlihat
 - Posisi diperbarui berkala (bukan sekali muat saja)
 - Bisa juga dibuka dari halaman detail transaksi untuk melacak satu mobil saja
+
+Karena unit tidak dibedakan per plat, marker diikat ke **kode transaksi**, bukan
+ke nomor polisi.
 
 ### Sumber posisi
 
@@ -255,22 +335,28 @@ sehari, sebulan, atau rentang bebas.
 
 ### Kolom yang diekspor
 
-| Kolom | Sumber |
-|---|---|
-| Kode transaksi | Transaksi |
-| Tanggal mulai / Tanggal selesai | Transaksi |
-| Durasi (hari) | Transaksi |
-| Nama mobil | Katalog |
-| Nama customer | Customer |
-| No. HP customer | Customer |
-| Harga jual per hari | Snapshot di transaksi |
-| Total harga jual | Hitungan |
-| Harga modal per hari | Snapshot di transaksi |
-| Total modal | Hitungan |
-| Laba | Total jual − total modal |
-| Status | Transaksi |
+| Kolom | Sumber | Super Admin saja? |
+|---|---|---|
+| Kode transaksi | Transaksi | |
+| Tanggal mulai / Tanggal selesai | Transaksi | |
+| Durasi (hari) | Transaksi | |
+| Nama mobil | Katalog | |
+| Nama customer | Customer | |
+| No. HP customer | Customer | |
+| Layanan (lepas kunci / sopir) | Transaksi | |
+| Harga jual per hari | Snapshot di transaksi | |
+| Biaya sewa | Hitungan | |
+| Biaya sopir | Hitungan | |
+| Denda overtime | Hitungan | |
+| **Total tagihan** | Hitungan | |
+| Total dibayar / Sisa | Riwayat pembayaran | |
+| Status pembayaran | Hitungan | |
+| Status transaksi | Transaksi | |
+| Harga modal per hari | Snapshot di transaksi | ✅ |
+| Total modal | Hitungan | ✅ |
+| Laba | Total tagihan − total modal | ✅ |
 
-Baris terakhir berisi **total** untuk kolom total jual, total modal, dan laba.
+Baris terakhir berisi **total** untuk kolom uang.
 
-> Kolom modal & laba bersifat internal. Kalau nanti ada peran non-owner, kolom
-> ini disembunyikan untuk peran tersebut.
+> Kolom bertanda ✅ hanya ikut ter-export kalau yang login **Super Admin**.
+> Untuk Admin staf, kolom itu tidak ada di file — bukan sekadar dikosongkan.

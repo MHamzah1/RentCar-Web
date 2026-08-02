@@ -8,13 +8,13 @@ implementasi — tapi bentuk relasinya sebaiknya dipertahankan.
 ```mermaid
 erDiagram
     ADMIN ||--o{ TRANSACTION : "menginput"
-    CAR ||--o{ CAR_UNIT : "punya"
     CAR ||--o{ TRANSACTION : "disewakan"
     CUSTOMER ||--o{ TRANSACTION : "menyewa"
     CUSTOMER ||--o{ CUSTOMER_DOCUMENT : "punya"
     CUSTOMER ||--o{ GUARANTEE : "punya"
     TRANSACTION }o--|| GUARANTEE : "memakai"
-    CAR_UNIT ||--o{ TRACKING_POSITION : "mengirim"
+    TRANSACTION ||--o{ PAYMENT : "menerima"
+    TRANSACTION ||--o{ TRACKING_POSITION : "mengirim"
 ```
 
 ---
@@ -29,8 +29,11 @@ Akun internal untuk login.
 | name | string | Nama admin |
 | email | string unik | Dipakai untuk login |
 | passwordHash | string | Hash, tidak pernah plaintext |
+| **role** | enum | `SUPER_ADMIN` (Owner) atau `ADMIN` (Staf) |
 | isActive | boolean | Bisa dinonaktifkan tanpa dihapus |
 | createdAt / updatedAt | datetime | |
+
+Hanya `SUPER_ADMIN` yang boleh menerima data harga modal, margin, dan laba.
 
 ---
 
@@ -41,7 +44,7 @@ Akun internal untuk login.
 | id | id | |
 | slug | string unik | Untuk URL landing page |
 | name | string | Contoh: Toyota Avanza 2022 |
-| category | enum | Sedan / SUV / MPV / Minivan / Pickup / dll. |
+| category | enum | MPV / SUV / Hatchback / Minibus |
 | description | text | Tampil di landing page |
 | imageUrl | string | Foto utama |
 | gallery | string[] | Foto tambahan |
@@ -57,25 +60,15 @@ Akun internal untuk login.
 | createdAt / updatedAt | datetime | |
 
 **Turunan (dihitung, tidak disimpan):**
-`availableUnit = totalUnit − jumlah transaksi berstatus BOOKING atau ON_TRIP`
 
----
+```
+availableUnit = totalUnit − jumlah transaksi berstatus
+                BOOKING, ON_TRIP, OVERTIME, atau EXTENDED
+```
 
-## CarUnit (opsional, kalau tiap unit dibedakan)
-
-Dipakai kalau satu model mobil punya beberapa unit fisik dengan plat berbeda —
-dan dibutuhkan untuk tracking per unit.
-
-| Field | Tipe | Keterangan |
-|---|---|---|
-| id | id | |
-| carId | ref → Car | |
-| plateNumber | string | Nomor polisi |
-| trackerDeviceId | string | ID perangkat GPS tracker |
-| isActive | boolean | |
-
-> Kalau tracking belum dipasang di semua mobil, tabel ini boleh menyusul di
-> tahap kedua. Untuk versi pertama, transaksi cukup menunjuk ke `Car`.
+> **Tidak ada tabel CarUnit.** Sudah diputuskan bahwa unit tidak dibedakan per
+> nomor plat — cukup hitungan jumlah unit per model. Transaksi menunjuk langsung
+> ke `Car`.
 
 ---
 
@@ -171,34 +164,86 @@ mana yang dipakai, atau membuat jaminan baru kalau kendaraannya berbeda.
 | id | id | |
 | code | string unik | Kode transaksi, contoh `TRX-20260801-001` |
 | carId | ref → Car | |
-| carUnitId | ref → CarUnit | Opsional |
 | customerId | ref → Customer | |
 | guaranteeId | ref → Guarantee | Jaminan yang dipakai di transaksi ini |
 | **startDate** | date | Tanggal mulai sewa |
-| **durationDays** | int | Durasi (hari) |
-| **departureTime** | time | Jam berangkat |
-| endDate | date | **Dihitung:** startDate + durationDays |
+| **durationDays** | int | Durasi (hari), bertambah kalau diperpanjang |
+| **departureTime** | time | Jam berangkat — juga patokan jam pengembalian |
 | sellPricePerDay | int | **Snapshot** harga jual saat booking |
 | costPricePerDay | int | **Snapshot** harga modal saat booking |
-| totalSell | int | sellPricePerDay × durationDays |
-| totalCost | int | costPricePerDay × durationDays |
-| profit | int | totalSell − totalCost |
-| status | enum | BOOKING / ON_TRIP / DONE |
+| withDriver | boolean | Lepas kunci (false) atau dengan sopir (true) |
+| driverPricePerDay | int | **Snapshot** harga sopir (Rp 500.000) |
+| driverCostPerDay | int | **Snapshot** upah sopir — internal, masih perlu dikonfirmasi |
+| handoverVideoUrl | string | Video kondisi awal unit. **Wajib** sebelum ON_TRIP |
+| handoverVideoAt | datetime | Kapan video diunggah |
+| extendedDays | int | Total hari tambahan dari perpanjangan (0 kalau tidak) |
+| status | enum | Lihat tabel di bawah |
+| cancelledAt | datetime | Diisi kalau dibatalkan |
+| cancelReason | text | Alasan pembatalan |
 | notes | text | Catatan admin |
 | createdByAdminId | ref → Admin | Siapa yang menginput |
 | createdAt / updatedAt | datetime | |
 
 **Kenapa harga di-snapshot:** kalau harga di katalog diubah bulan depan,
 transaksi lama harus tetap memakai harga yang berlaku saat booking. Tanpa
-snapshot, rekap dan laba historis jadi salah.
+snapshot, rekap dan laba historis jadi salah. Berlaku juga untuk harga sopir.
+
+### Turunan (dihitung, tidak disimpan)
+
+```
+endDate       = startDate + durationDays
+returnDeadline= endDate pada jam departureTime
+overtimeHours = maks(0, sekarang − returnDeadline) dalam jam
+lateFee       = overtimeHours × 50.000
+rentalFee     = sellPricePerDay × durationDays
+driverFee     = withDriver ? driverPricePerDay × durationDays : 0
+grandTotal    = rentalFee + driverFee + lateFee
+totalPaid     = jumlah semua Payment
+outstanding   = grandTotal − totalPaid
+totalCost     = (costPricePerDay + (withDriver ? driverCostPerDay : 0)) × durationDays
+profit        = grandTotal − totalCost      ← Super Admin saja
+```
 
 ### Enum status
 
-| Nilai | Label di UI |
+| Nilai | Label di UI | Menahan unit? |
+|---|---|---|
+| `BOOKING` | Booking | Ya |
+| `ON_TRIP` | Sedang Perjalanan | Ya |
+| `OVERTIME` | Lewat Waktu | Ya |
+| `EXTENDED` | Diperpanjang | Ya |
+| `DONE` | Selesai | Tidak |
+| `CANCELLED` | Batal | Tidak |
+
+> `OVERTIME` **dihitung saat data dibaca**, bukan disimpan lewat cron. Kalau
+> `status ∈ {ON_TRIP, EXTENDED}` dan `sekarang > returnDeadline`, status yang
+> ditampilkan adalah `OVERTIME`. Ini menghindari job terjadwal yang bisa gagal
+> jalan dan meninggalkan status ngambang.
+
+---
+
+## Payment
+
+Riwayat pembayaran per transaksi. Satu transaksi bisa punya banyak pembayaran.
+
+| Field | Tipe | Keterangan |
+|---|---|---|
+| id | id | |
+| transactionId | ref → Transaction | |
+| type | enum | `DP` / `SETTLEMENT` (pelunasan) / `LATE_FEE` (denda) |
+| amount | int (Rupiah) | |
+| method | enum | `CASH` / `TRANSFER` |
+| paidAt | datetime | |
+| recordedByAdminId | ref → Admin | |
+| note | text | |
+
+**Status pembayaran (dihitung):**
+
+| Kondisi | Label |
 |---|---|
-| `BOOKING` | Booking |
-| `ON_TRIP` | Sedang Perjalanan |
-| `DONE` | Selesai |
+| `totalPaid = 0` | Belum Bayar |
+| `0 < totalPaid < grandTotal` | DP |
+| `totalPaid ≥ grandTotal` | Lunas |
 
 ---
 
@@ -210,7 +255,7 @@ Riwayat posisi mobil. Bentuk pastinya tergantung sumber data yang dipilih
 | Field | Tipe | Keterangan |
 |---|---|---|
 | id | id | |
-| carUnitId | ref → CarUnit | |
+| transactionId | ref → Transaction | Diikat ke transaksi, bukan ke plat |
 | latitude | float | |
 | longitude | float | |
 | speed | float | km/jam, kalau tersedia |

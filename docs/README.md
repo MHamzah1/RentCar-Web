@@ -22,9 +22,14 @@ mengarahkan mereka ke WhatsApp admin (**081574865632**). Tidak ada booking
 mandiri (self-service) di website — semua kesepakatan terjadi di WhatsApp.
 **Admin internal** adalah backoffice tempat admin memasukkan hasil kesepakatan
 itu ke sistem: memilih mobil dari katalog, mengisi/memilih data customer,
-mencatat jaminan, lalu membuat transaksi dengan status Booking → Sedang
-Perjalanan → Selesai. Admin juga bisa melacak posisi mobil di peta dan
-meng-export rekap transaksi ke Excel berdasarkan rentang tanggal.
+mencatat jaminan dan DP, lalu membuat transaksi. Saat mobil berangkat admin
+wajib mengunggah video kondisi awal unit. Kalau lewat batas kembali, status
+otomatis jadi Lewat Waktu, denda Rp 50.000/jam berjalan, dan admin bisa
+memperpanjang sewa. Admin juga melacak posisi mobil di peta dan meng-export
+rekap transaksi ke Excel berdasarkan rentang tanggal.
+
+Ada dua peran: **Super Admin (Owner)** yang bisa melihat harga modal dan laba,
+dan **Admin (Staf)** yang tidak.
 
 ## Enam Modul Admin
 

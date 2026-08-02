@@ -15,7 +15,29 @@ diputuskan**. Setiap keputusan yang sudah final sebaiknya dipindahkan ke bagian
 | Bahasa | TypeScript strict |
 | Booking customer | Lewat WhatsApp ke **081574865632**, bukan form di website |
 | Yang menginput transaksi | Admin internal, manual |
-| Status transaksi | Booking → Sedang Perjalanan → Selesai |
+| Status transaksi | Booking → Sedang Perjalanan → Selesai, plus Batal, Lewat Waktu, Diperpanjang (lihat `docs/02`) |
+| Unit mobil | **Tidak** dibedakan per plat — cukup jumlah unit per model |
+| Peran pengguna | Dua: **Super Admin (Owner)** dan **Admin (Staf)** |
+| Pembayaran | Dicatat di sistem: **DP + pelunasan** |
+| Denda keterlambatan | **Rp 50.000 per jam** overtime |
+| Sewa dengan sopir | **Rp 500.000 per hari**, flat untuk semua mobil |
+| Foto mobil | Diunggah admin lewat modul Katalog |
+
+### Aturan bisnis yang diputuskan 2 Agustus 2026
+
+Rinciannya ada di [02 — Alur Bisnis](02-alur-bisnis.md) dan
+[03 — Modul Admin](03-modul-admin.md). Ringkasnya:
+
+1. **Status batal** ada. Unit kembali ke stok saat transaksi dibatalkan.
+2. **Video kondisi awal unit wajib** saat admin menekan tombol "Mulai
+   Perjalanan". Tanpa video, status tidak bisa berpindah dari Booking.
+3. **Status Lewat Waktu (overtime) muncul otomatis** begitu melewati batas
+   pengembalian — tidak perlu diklik admin.
+4. Dari Lewat Waktu, admin bisa **memperpanjang** sewa dengan menambah jumlah
+   hari. Statusnya menjadi **Diperpanjang**.
+5. **Reminder overtime** tampil sebagai notifikasi **di dalam aplikasi admin**.
+6. **Harga modal dan laba hanya untuk Super Admin.** Admin staf tidak melihat
+   kolom modal, laba, maupun margin di mana pun.
 
 ### Catatan penting soal Next.js 16
 
@@ -124,24 +146,48 @@ Alternatif lebih ringan: SheetJS (`xlsx`) kalau formatting tidak penting.
 
 ---
 
+### Penyimpanan video serah terima
+
+Video kondisi awal unit wajib diunggah saat mobil berangkat. Video jauh lebih
+besar dari foto, jadi perlu dipikirkan sejak awal:
+
+- Simpan di object storage yang sama dengan dokumen (privat, signed URL) —
+  **bukan** di `public/` dan bukan di database.
+- Batasi durasi/ukuran di sisi form (mis. maksimal 60 detik / 50 MB) supaya
+  unggahan dari HP admin tidak gagal di tengah jalan.
+- Kompresi di sisi browser sebelum unggah layak dipertimbangkan kalau koneksi
+  di lapangan lambat.
+
+### Reminder & notifikasi overtime
+
+**Keputusan:** reminder overtime tampil sebagai notifikasi **di dalam aplikasi
+admin** (lonceng di topbar + daftar di dashboard). Tidak mengirim WhatsApp atau
+email otomatis ke customer — itu masih ada di daftar batasan `docs/01`.
+
+**Rekomendasi teknis:** status Lewat Waktu **dihitung saat data dibaca**
+(`sekarang > batas kembali` dan status masih berjalan), bukan disimpan lewat
+cron job. Alasannya: tanpa penjadwal, statusnya tetap benar setiap kali halaman
+dibuka, dan tidak ada risiko job gagal jalan lalu status ngambang.
+
+---
+
 ## Pertanyaan Terbuka
 
-Hal-hal yang belum terjawab dari catatan fitur dan perlu dikonfirmasi sebelum
-implementasi:
+Hal-hal yang masih perlu dikonfirmasi:
 
 1. **Tracking** — GPS tracker sudah terpasang di mobil? Vendornya siapa dan
-   apakah menyediakan API? (Paling menentukan; lihat di atas)
-2. **Pembayaran** — apakah DP / pelunasan perlu dicatat di transaksi? Catatan
-   fitur belum menyebut soal uang masuk, hanya harga jual dan modal.
-3. **Denda keterlambatan** — kalau mobil telat dikembalikan, apakah ada
-   perhitungan denda?
-4. **Pembatalan** — kalau customer batal setelah status Booking, statusnya jadi
-   apa? Saat ini alur hanya satu arah sampai Selesai, belum ada "Batal".
-5. **Unit mobil** — apakah tiap unit fisik perlu dibedakan (nomor plat
-   masing-masing), atau cukup hitungan jumlah unit per model?
-6. **Peran pengguna** — apakah cukup satu peran Admin, atau perlu Owner yang
-   bisa melihat harga modal & laba versus Staf yang tidak?
-7. **Sewa dengan driver** — apakah ada opsi lepas kunci vs dengan driver? Kalau
-   ada, harganya berbeda dan perlu field tambahan.
-8. **Foto mobil** — foto asli diunggah lewat admin, atau tetap memakai foto
-   stok untuk sementara?
+   apakah menyediakan API? _(status: **ditahan**, user masih mencari tahu —
+   modul tracking dibangun sebagai tampilan dummy dulu)_
+2. **Modal sopir** — harga jual sopir Rp 500.000/hari sudah pasti. Tapi berapa
+   upah yang dibayarkan ke sopir? Angka ini dibutuhkan supaya laba tetap benar
+   saat sewa memakai sopir. _(sementara diasumsikan Rp 350.000/hari di data
+   dummy — mohon dikoreksi)_
+3. **Pembatalan** — batal hanya boleh dari status Booking, atau boleh juga
+   setelah mobil jalan? _(sementara diasumsikan: **hanya dari Booking**)_
+4. **DP hangus atau tidak** saat transaksi dibatalkan? Belum ada aturannya.
+5. **Denda overtime** — dihitung mulai jam ke berapa? Ada toleransi
+   (mis. 1 jam pertama gratis) atau langsung dihitung sejak lewat satu menit?
+6. **Perpanjangan** — saat sewa diperpanjang, denda overtime yang sudah
+   terlanjur berjalan tetap ditagih atau dihapus? _(sementara diasumsikan:
+   **tetap ditagih** sampai jam perpanjangan disetujui)_
+7. **Batas unggah video** — durasi/ukuran maksimal video serah terima berapa?

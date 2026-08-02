@@ -12,7 +12,7 @@ flowchart TD
     C --> D[Diarahkan ke WhatsApp admin 081574865632<br/>pesan sudah terisi nama mobil dan harga]
     D --> E{Deal di WhatsApp?}
     E -- Tidak --> Z[Selesai, tidak ada transaksi]
-    E -- Ya --> F[Sepakat: mobil, tanggal pergi, tanggal pulang]
+    E -- Ya --> F[Sepakat: mobil, tanggal, lepas kunci atau pakai sopir]
     F --> G[Admin buka Katalog Mobil di Admin Internal]
     G --> H[Pilih mobil, klik Booking]
     H --> I[Masuk ke halaman Transaksi<br/>data mobil sudah terisi otomatis]
@@ -20,14 +20,23 @@ flowchart TD
     J -- Ya, langganan --> K[Pilih customer, data langsung muncul]
     J -- Belum --> L[Input customer baru:<br/>scan KTP via foto atau input manual]
     L --> M[Lengkapi kontak, lokasi, dokumen]
-    K --> N[Input / konfirmasi jaminan<br/>motor yang dititip + atas nama]
+    K --> N[Input / konfirmasi jaminan]
     M --> N
-    N --> O[Input tanggal mulai, durasi hari, jam berangkat]
-    O --> P[Simpan → status BOOKING<br/>stok unit mobil berkurang 1]
-    P --> Q[Mobil berangkat → status SEDANG PERJALANAN]
-    Q --> R[Admin pantau posisi di Tracking Maps]
-    R --> S[Mobil kembali → status SELESAI<br/>stok unit kembali +1]
-    S --> T[Transaksi masuk rekap, bisa di-export ke Excel]
+    N --> O[Input tanggal mulai, durasi, jam berangkat,<br/>opsi sopir, dan DP yang diterima]
+    O --> P[Simpan → status BOOKING<br/>stok unit berkurang 1]
+    P --> Q{Jadi berangkat?}
+    Q -- Batal --> X[Status BATAL<br/>stok unit kembali]
+    Q -- Ya --> R[Admin klik Mulai Perjalanan<br/>WAJIB unggah video kondisi awal unit]
+    R --> S[Status SEDANG PERJALANAN]
+    S --> T[Admin pantau posisi di Tracking Maps]
+    T --> U{Lewat batas kembali?}
+    U -- Tidak --> V[Mobil kembali → pelunasan → status SELESAI<br/>stok unit kembali]
+    U -- Ya --> W[Status LEWAT WAKTU otomatis<br/>+ notifikasi ke admin<br/>+ denda Rp 50.000/jam berjalan]
+    W --> Y{Diperpanjang?}
+    Y -- Ya --> AA[Admin tambah jumlah hari<br/>status DIPERPANJANG]
+    AA --> U
+    Y -- Tidak --> V
+    V --> AB[Transaksi masuk rekap, bisa di-export ke Excel]
 ```
 
 ## Penjelasan Per Tahap
@@ -42,16 +51,9 @@ pernah ditampilkan di sisi publik.
 
 Customer menekan tombol booking pada mobil yang diminati. Website membuka
 WhatsApp ke nomor admin **081574865632** dengan pesan yang sudah terisi
-otomatis, minimal berisi nama mobil dan harga per hari, supaya admin langsung
-tahu mobil mana yang ditanyakan.
+otomatis, minimal berisi nama mobil dan harga per hari.
 
-Format tautan yang dipakai: `https://wa.me/6281574865632?text=<pesan>`
-(nomor ditulis format internasional tanpa `+` dan tanpa `0` di depan).
-
-Contoh isi pesan:
-
-> Halo Admin RentCar, saya tertarik menyewa **Toyota Avanza** (Rp 350.000/hari).
-> Apakah masih tersedia?
+Format tautan: `https://wa.me/6281574865632?text=<pesan>`
 
 ### Tahap 3 — Negosiasi & kesepakatan (di luar sistem)
 
@@ -61,67 +63,127 @@ sistem:
 - Mobil yang disepakati
 - Tanggal pergi dan tanggal pulang (atau durasi)
 - Jam berangkat
+- **Lepas kunci atau pakai sopir** (sopir + Rp 500.000/hari)
 - Jaminan yang akan dititipkan
+- Besaran DP
 
 ### Tahap 4 — Admin membuat booking dari katalog internal
 
-Admin login ke Admin Internal, membuka **Katalog Mobil**, memilih mobil yang
-disepakati, lalu menekan tombol **Booking**. Sistem memindahkan admin ke
-halaman **Transaksi** dengan data mobil sudah terisi otomatis (nama, harga jual
-per hari, harga modal per hari, unit yang dipilih).
+Admin login, membuka **Katalog Mobil**, memilih mobil yang disepakati, lalu
+menekan tombol **Booking**. Sistem memindahkan admin ke halaman **Transaksi**
+dengan data mobil sudah terisi otomatis.
 
 ### Tahap 5 — Menentukan customer
 
-Dua kemungkinan:
-
-- **Customer langganan** — admin mencari nama/No. HP, data lama langsung
-  muncul lengkap dengan dokumen dan jaminan yang tersimpan.
-- **Customer baru** — admin menginput data. Ada dua jalur input:
-  1. **Scan KTP via foto** — admin memotret/mengunggah KTP, sistem membaca
-     teksnya (OCR) dan mengisi field secara otomatis. Hasilnya tampil sebagai
-     teks yang **masih bisa dikoreksi admin** sebelum disimpan. Foto KTP yang
-     dipakai untuk scan **otomatis tersimpan** ke daftar dokumen customer.
-  2. **Input manual** — kalau scan gagal atau tidak dipakai, admin mengetik
-     sendiri seluruh data sesuai yang tertera di KTP.
+- **Customer langganan** — admin mencari nama/No. HP, data lama langsung muncul
+  lengkap dengan dokumen dan jaminan.
+- **Customer baru** — admin menginput lewat **scan KTP** (OCR mengisi field,
+  hasilnya masih bisa dikoreksi sebelum disimpan) atau **input manual**.
 
 Detail field ada di [05 — Model Data](05-model-data.md).
 
 ### Tahap 6 — Jaminan
 
-Customer menitipkan jaminan, umumnya **motor**. Yang dicatat: motor apa yang
-dititipkan dan atas nama siapa.
-
-Jaminan tersimpan di data customer supaya bisa dipakai lagi di transaksi
-berikutnya, **tetapi bisa diinput ulang per transaksi** kalau kendaraan yang
-dititipkan berbeda dari yang tersimpan.
+Customer menitipkan jaminan, umumnya **motor**: kendaraan apa yang dititipkan
+dan atas nama siapa. Jaminan tersimpan di data customer supaya bisa dipakai
+lagi, tetapi bisa diinput ulang per transaksi kalau kendaraannya berbeda.
 
 ### Tahap 7 — Input detail sewa
 
 Admin mengisi:
 
-- **Tanggal mulai sewa**
-- **Durasi (hari)**
-- **Jam berangkat**
+| Field | Keterangan |
+|---|---|
+| Tanggal mulai sewa | Tanggal pengambilan mobil |
+| Durasi (hari) | Lama sewa |
+| Jam berangkat | Jam pengambilan — juga jadi patokan jam pengembalian |
+| Layanan | **Lepas kunci** atau **Dengan sopir** (+Rp 500.000/hari) |
+| DP diterima | Uang muka yang sudah dibayar customer |
 
-Tanggal selesai dihitung otomatis dari tanggal mulai + durasi. Total biaya
-dihitung otomatis dari harga jual per hari × durasi.
+**Dihitung otomatis:**
 
-Setelah disimpan, status transaksi menjadi **Booking** dan jumlah unit tersedia
-untuk mobil tersebut **berkurang satu**.
+- Tanggal selesai = tanggal mulai + durasi
+- Biaya sewa = harga jual/hari × durasi
+- Biaya sopir = Rp 500.000 × durasi (kalau pakai sopir)
+- Total tagihan = biaya sewa + biaya sopir + denda (kalau ada)
+- Sisa tagihan = total tagihan − total yang sudah dibayar
 
-### Tahap 8 — Siklus status
+Setelah disimpan, status menjadi **Booking** dan unit tersedia berkurang satu.
 
-| Status | Arti | Efek ke stok |
+### Tahap 8 — Berangkat: video kondisi awal wajib
+
+Admin menekan tombol **Mulai Perjalanan**. Sebelum status berpindah, sistem
+**mewajibkan admin mengunggah video kondisi awal mobil**. Video ini jadi bukti
+keadaan unit saat diserahkan — dipakai kalau ada sengketa baret, penyok, atau
+kelengkapan yang hilang saat pengembalian.
+
+Tanpa video, tombol tidak bisa diteruskan. Status lalu menjadi
+**Sedang Perjalanan**.
+
+### Tahap 9 — Siklus status
+
+```
+                    ┌──────────────► BATAL (stok kembali)
+                    │
+BOOKING ────────────┴──► SEDANG PERJALANAN ──────────────► SELESAI
+   (video wajib di sini)          │                            ▲
+                                  ▼ (otomatis, lewat batas)    │
+                             LEWAT WAKTU ──(+n hari)──► DIPERPANJANG
+                                  │                            │
+                                  └────────────────────────────┘
+```
+
+| Status | Arti | Menahan unit? |
 |---|---|---|
-| **Booking** | Sudah dipesan, mobil belum berangkat | Unit tersedia −1 |
-| **Sedang Perjalanan** | Mobil sudah dibawa customer | Tetap terpakai |
-| **Selesai** | Mobil sudah kembali, sewa berakhir | Unit tersedia +1 |
+| **Booking** | Sudah dipesan, mobil belum berangkat | Ya |
+| **Sedang Perjalanan** | Mobil sudah dibawa customer | Ya |
+| **Lewat Waktu** | Melewati batas pengembalian — **berubah otomatis** | Ya |
+| **Diperpanjang** | Sewa ditambah beberapa hari oleh admin | Ya |
+| **Selesai** | Mobil kembali, tagihan lunas | Tidak |
+| **Batal** | Booking dibatalkan sebelum berangkat | Tidak |
 
-Perpindahan status dilakukan manual oleh admin.
+Aturan:
 
-### Tahap 9 — Pemantauan & pelaporan
+- Perpindahan status dilakukan admin, **kecuali Lewat Waktu** yang muncul
+  otomatis begitu waktu pengembalian terlampaui.
+- **Batal hanya dari status Booking** — setelah mobil jalan tidak bisa dibatalkan.
+- Status Selesai dan Batal sama-sama mengembalikan unit ke stok.
 
-Selama status **Sedang Perjalanan**, admin bisa melihat posisi mobil di modul
-**Tracking Maps Car**. Setelah **Selesai**, transaksi masuk rekap dan bisa
-di-export ke Excel dengan filter `startDate` dan `endDate` (harian, bulanan,
-atau rentang bebas).
+### Tahap 10 — Lewat waktu, denda, dan perpanjangan
+
+Batas pengembalian = tanggal selesai pada **jam yang sama dengan jam berangkat**.
+
+Begitu terlampaui:
+
+1. Status berubah otomatis menjadi **Lewat Waktu**.
+2. Admin menerima **notifikasi di dalam aplikasi** (lonceng + daftar di dashboard).
+3. **Denda berjalan Rp 50.000 per jam** dan ikut masuk ke total tagihan.
+
+Dari sini admin punya dua pilihan:
+
+- **Perpanjang** — masukkan tambahan berapa hari. Sewa diperpanjang, status
+  menjadi **Diperpanjang**, dan biaya sewa bertambah sesuai jumlah hari baru.
+- **Selesaikan** — mobil dikembalikan, denda ditagih bersama pelunasan, status
+  menjadi **Selesai**.
+
+### Tahap 11 — Pembayaran
+
+Pembayaran dicatat di sistem, bukan hanya diingat:
+
+| Jenis | Kapan |
+|---|---|
+| **DP** | Saat booking dibuat |
+| **Pelunasan** | Saat mobil dikembalikan |
+| **Denda** | Kalau ada overtime |
+
+Status pembayaran dihitung dari total yang sudah masuk:
+
+- **Belum Bayar** — belum ada pembayaran
+- **DP** — sudah bayar sebagian
+- **Lunas** — total dibayar ≥ total tagihan
+
+### Tahap 12 — Pemantauan & pelaporan
+
+Selama mobil di luar, admin bisa melihat posisi di modul **Tracking Maps**.
+Setelah **Selesai**, transaksi masuk rekap dan bisa di-export ke Excel dengan
+filter `startDate` dan `endDate`.

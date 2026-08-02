@@ -42,11 +42,16 @@ kode Next.js.** Versi ini punya breaking change dari yang mungkin kamu ingat.
 Yang paling sering menjebak: sejak Next.js 16 **Middleware bernama Proxy**
 (`01-app/01-getting-started/16-proxy.md`).
 
-### 2. Harga modal tidak boleh bocor ke publik
+### 2. Harga modal hanya untuk Super Admin
 
-`costPricePerDay` dan turunannya (`totalCost`, `profit`) **hanya untuk admin**.
-Tidak boleh masuk ke response/props halaman publik, tidak boleh ikut terkirim ke
-client component landing page. Yang publik hanya `sellPricePerDay`.
+`costPricePerDay`, `driverCostPerDay`, dan turunannya (`totalCost`, `profit`,
+margin) **tidak boleh** sampai ke:
+
+- halaman publik mana pun, dan
+- akun ber-peran **Admin (Staf)** — hanya **Super Admin (Owner)** yang boleh.
+
+Untuk keduanya, angka itu tidak boleh sekadar disembunyikan di CSS — jangan ikut
+dikirim sebagai props/response sama sekali. Yang publik hanya `sellPricePerDay`.
 
 ### 3. Data pribadi customer tidak pernah ke publik
 
@@ -65,25 +70,57 @@ jangan di-hardcode tersebar di banyak komponen.
 
 ### 5. Harga di transaksi adalah snapshot
 
-Saat transaksi dibuat, `sellPricePerDay` dan `costPricePerDay` **disalin** ke
-record transaksi. Jangan menghitung total historis dengan join ke harga katalog
-yang sedang berlaku — rekap laba akan salah begitu harga diubah.
+Saat transaksi dibuat, `sellPricePerDay`, `costPricePerDay`, dan harga sopir
+**disalin** ke record transaksi. Jangan menghitung total historis dengan join ke
+harga katalog yang sedang berlaku — rekap laba akan salah begitu harga diubah.
 
 ### 6. Ketersediaan unit dihitung, bukan di-decrement manual
 
-`availableUnit = totalUnit − transaksi berstatus BOOKING atau ON_TRIP`.
+Unit **tidak dibedakan per plat** — hanya jumlah unit per model.
+
+```
+availableUnit = totalUnit − transaksi berstatus
+                BOOKING, ON_TRIP, OVERTIME, atau EXTENDED
+```
+
 Jangan menyimpan kolom counter yang dikurangi/ditambah manual — itu gampang
-drift kalau ada transaksi dibatalkan atau diedit.
+drift kalau ada transaksi dibatalkan atau diperpanjang.
 
-### 7. Status transaksi maju satu arah
+### 7. Status transaksi
 
-`BOOKING → ON_TRIP → DONE`. Belum ada status batal (lihat pertanyaan terbuka
-di `docs/06`). Jangan menambah status baru tanpa keputusan user.
+```
+BOOKING ──► ON_TRIP ──► DONE          BOOKING ──► CANCELLED
+              │  ▲
+              ▼  │
+          OVERTIME ──► EXTENDED
+```
 
-### 8. Semua `/admin/*` wajib auth
+- `OVERTIME` **dihitung saat baca** (`sekarang > batas kembali`), bukan disimpan
+  lewat cron. Jangan bikin job terjadwal untuk ini.
+- `CANCELLED` **hanya boleh dari `BOOKING`**.
+- `DONE` dan `CANCELLED` mengembalikan unit ke stok.
+- Jangan menambah status lain tanpa keputusan user.
 
-Tidak ada halaman admin yang bisa dibuka tanpa sesi login. Cek auth di sisi
-server — jangan hanya menyembunyikan tombol di client.
+### 7a. Video serah terima wajib sebelum berangkat
+
+Perpindahan `BOOKING → ON_TRIP` **harus** diblokir kalau video kondisi awal unit
+belum diunggah. Validasi di server, bukan cuma `disabled` di tombol. Video
+disimpan di storage privat, sama seperti dokumen customer.
+
+### 7b. Denda dan biaya sopir
+
+- Denda overtime = **Rp 50.000 per jam**, dihitung, tidak diinput manual.
+- Sopir = **Rp 500.000 per hari**, flat untuk semua mobil.
+- Reminder overtime = notifikasi **di dalam aplikasi admin**. Jangan mengirim
+  WhatsApp/email otomatis ke customer — itu di luar lingkup (`docs/01`).
+
+### 8. Semua `/admin/*` wajib auth, dan peran menentukan isi data
+
+Tidak ada halaman admin yang bisa dibuka tanpa sesi login. Cek auth **dan peran**
+di sisi server — jangan hanya menyembunyikan tombol di client.
+
+Dua peran: `SUPER_ADMIN` (Owner) dan `ADMIN` (Staf). Lihat aturan 2 soal data
+mana yang tidak boleh dikirim ke Staf.
 
 ### 9. Uang disimpan sebagai integer Rupiah
 
